@@ -7,18 +7,12 @@ import DataSummary from './DataSummary';
 const Dashboard = ({ data }) => {
   const [activeTab, setActiveTab] = useState('summary');
 
-  // データがない場合のメッセージ
-  if (!data || !data.data || data.data.length === 0) {
-    return (
-      <div className="text-center py-10">
-        <p className="text-gray-500">データがありません</p>
-      </div>
-    );
-  }
+  // データが存在するかどうかをチェック
+  const hasData = data && data.data && data.data.length > 0;
 
   // 地域別の幸福度グラフデータ
   const regionHappinessData = useMemo(() => {
-    if (!data.region_happiness) return null;
+    if (!hasData || !data.region_happiness) return null;
     
     const labels = Object.keys(data.region_happiness);
     const values = Object.values(data.region_happiness);
@@ -35,11 +29,11 @@ const Dashboard = ({ data }) => {
         }
       ]
     };
-  }, [data.region_happiness]);
+  }, [hasData, data]);
 
   // 幸福度と上位要因の相関図データ
   const correlationScatterData = useMemo(() => {
-    if (!data.factor_correlations || !data.data) return null;
+    if (!hasData || !data.factor_correlations || !data.data) return null;
     
     // 最も相関の高い2つの要因を取得
     const topFactors = Object.keys(data.factor_correlations).slice(0, 2);
@@ -68,11 +62,11 @@ const Dashboard = ({ data }) => {
         }
       ]
     };
-  }, [data.factor_correlations, data.data]);
+  }, [hasData, data]);
 
   // 幸福度上位10カ国のグラフデータ
   const topCountriesData = useMemo(() => {
-    if (!data.top_happy_countries) return null;
+    if (!hasData || !data.top_happy_countries) return null;
     
     const countries = Object.keys(data.top_happy_countries).slice(0, 10);
     const scores = countries.map(country => data.top_happy_countries[country]);
@@ -89,11 +83,11 @@ const Dashboard = ({ data }) => {
         }
       ]
     };
-  }, [data.top_happy_countries]);
+  }, [hasData, data]);
 
   // 幸福度下位10カ国のグラフデータ
   const bottomCountriesData = useMemo(() => {
-    if (!data.bottom_happy_countries) return null;
+    if (!hasData || !data.bottom_happy_countries) return null;
     
     const countries = Object.keys(data.bottom_happy_countries).slice(0, 10);
     const scores = countries.map(country => data.bottom_happy_countries[country]);
@@ -110,11 +104,11 @@ const Dashboard = ({ data }) => {
         }
       ]
     };
-  }, [data.bottom_happy_countries]);
+  }, [hasData, data]);
 
   // 相関係数のグラフデータ
   const correlationData = useMemo(() => {
-    if (!data.factor_correlations) return null;
+    if (!hasData || !data.factor_correlations) return null;
     
     const factors = Object.keys(data.factor_correlations);
     const correlations = factors.map(factor => data.factor_correlations[factor]);
@@ -135,7 +129,16 @@ const Dashboard = ({ data }) => {
         }
       ]
     };
-  }, [data.factor_correlations]);
+  }, [hasData, data]);
+
+  // データがない場合のレンダリング
+  if (!hasData) {
+    return (
+      <div className="text-center py-10">
+        <p className="text-gray-500">データがありません</p>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -236,8 +239,8 @@ const Dashboard = ({ data }) => {
                 <ScatterChart 
                   data={correlationScatterData} 
                   title="主要要因の散布図" 
-                  xAxisLabel={Object.keys(data.factor_correlations)[0]} 
-                  yAxisLabel={Object.keys(data.factor_correlations)[1]} 
+                  xAxisLabel={data.factor_correlations ? Object.keys(data.factor_correlations)[0] : ''} 
+                  yAxisLabel={data.factor_correlations ? Object.keys(data.factor_correlations)[1] : ''} 
                 />
               )}
             </div>

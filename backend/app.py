@@ -1,10 +1,11 @@
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request, send_from_directory, after_this_request
 from flask_cors import CORS
 from data_processor import DataProcessor
 import os
 
 app = Flask(__name__)
-CORS(app)  # Cross-Origin Resource Sharingを有効化
+# より明示的なCORS設定
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
 # World Happiness Reportデータのデフォルトソース
 DEFAULT_DATA_URL = "https://raw.githubusercontent.com/JeffSackmann/tennis_atp/master/atp_rankings_current.csv"
@@ -13,6 +14,15 @@ WORLD_HAPPINESS_URL = "https://raw.githubusercontent.com/datahub-project/datahub
 
 # データプロセッサーのインスタンスを作成
 data_processor = DataProcessor(WORLD_HAPPINESS_URL)
+
+# すべてのレスポンスにCORSヘッダーを追加
+@app.after_request
+def add_cors_headers(response):
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    return response
 
 @app.route('/api/data', methods=['GET'])
 def get_data():
@@ -31,9 +41,15 @@ def get_data():
         }), 500
 
 @app.route('/api/process', methods=['GET'])
+@app.route('/process', methods=['GET'])  # 互換性のために両方のパスを対応
 def process_data():
     """データを処理して分析結果を返すエンドポイント"""
     try:
+        # リクエストパスをログに出力
+        print(f"リクエストパス: {request.path}")
+        print(f"リクエスト元: {request.remote_addr}")
+        print(f"リクエストヘッダー: {request.headers}")
+        
         # データURLをクエリパラメータから取得（オプション）
         data_url = request.args.get('url', WORLD_HAPPINESS_URL)
         
@@ -44,13 +60,16 @@ def process_data():
         else:
             # 既存のプロセッサーを使用
             results = data_processor.analyze_data()
-            
-        return jsonify({
+        
+        response = jsonify({
             'status': 'success',
             'results': results,
             'message': 'データの処理に成功しました'
         })
+        
+        return response
     except Exception as e:
+        print(f"APIエラー: {str(e)}")
         return jsonify({
             'status': 'error',
             'message': f'エラーが発生しました: {str(e)}'
@@ -72,15 +91,18 @@ def get_summary():
             'message': f'エラーが発生しました: {str(e)}'
         }), 500
 
+# フロントエンドのルート
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve_frontend(path):
     """フロントエンドのファイルを提供するための関数"""
+    print(f"フロントエンドへのリクエスト: {path}")
     if path != "" and os.path.exists(os.path.join('../frontend/build', path)):
         return send_from_directory('../frontend/build', path)
     else:
         return send_from_directory('../frontend/build', 'index.html')
 
 if __name__ == '__main__':
-    # 開発環境ではデバッグモードを有効化
-    app.run(debug=True, port=5000) 
+    # ネットワークインターフェースからのリクエストを受け付ける
+    print(f"サーバーを起動します: http://localhost:8000")
+    app.run(debug=True, port=8000, host='0.0.0.0') 

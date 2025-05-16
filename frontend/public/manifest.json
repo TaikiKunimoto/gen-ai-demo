@@ -1,0 +1,9 @@
+{
+  "short_name": "データ可視化",
+  "name": "データ可視化アプリケーション",
+  "icons": [],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#ffffff"
+} 
